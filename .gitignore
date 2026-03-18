@@ -36,7 +36,13 @@ build/
 serviceAccountKey.json
 auth-poluchain-firebase-adminsdk-fbsvc-4748a88e98.json
 
+# Compiled output
+firebase/functions/lib/
+frontend/dist/
+frontend/node_modules
+
 # Configuration
 .env
 firebase/functions/.env
 firebase/functions/.env.*
+frontend/.env
