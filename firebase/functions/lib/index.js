@@ -20,6 +20,7 @@ exports.processNewUser = (0, identity_1.beforeUserCreated)({ secrets: ["INTERNAL
     catch (err) {
         // Log but don't block registration — /auth/signin will upsert as fallback
         console.error("Failed to sync new user to backend:", err);
+        throw new identity_1.HttpsError("internal", "Registration temporarily unavailable.");
     }
 });
 //# sourceMappingURL=index.js.map

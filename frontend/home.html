@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home · Polychain Bets</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/src/style.css"/>
+  <style>
+    .home-layout {
+      position: relative; z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 60px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .home-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .user-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-avatar {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--border-hi);
+      display: none;
+      flex-shrink: 0;
+    }
+
+    .user-details { flex: 1; }
+
+    .user-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .user-email {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .profile-block {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      min-height: 60px;
+    }
+
+    .sign-out-btn {
+      background: var(--red-dim);
+      border: 1px solid rgba(255,79,106,.25);
+      border-radius: var(--radius-sm);
+      padding: 10px 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--red);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .sign-out-btn:hover { background: rgba(255,79,106,.2); }
+  </style>
+</head>
+<body>
+
+<div class="home-layout">
+
+  <div class="home-header">
+    <div class="badge">Polychain Bets</div>
+    <button class="sign-out-btn" id="btnSignOut">Sign out</button>
+  </div>
+
+  <h1>Welcome back</h1>
+
+  <!-- Firebase user (shown immediately) -->
+  <div class="user-card">
+    <img id="userAvatar" class="user-avatar" alt="Avatar"/>
+    <div class="user-details">
+      <div class="user-name" id="userName">Loading...</div>
+      <div class="user-email" id="userEmail"></div>
+    </div>
+  </div>
+
+  <!-- Backend /auth/signin status -->
+  <div>
+    <div class="section-label">Backend profile</div>
+    <div class="status-card status-idle" id="backendStatus">
+      <div class="status-label">LOADING</div>
+      <div class="status-message">Calling POST /auth/signin...</div>
+    </div>
+  </div>
+
+  <!-- Profile from backend -->
+  <div>
+    <div class="section-label">Profile from database</div>
+    <div class="profile-block user-info" id="profileBlock"></div>
+  </div>
+
+</div>
+
+<script type="module" src="/src/home.ts"></script>
+</body>
+</html>

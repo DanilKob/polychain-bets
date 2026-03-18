@@ -1,4 +1,4 @@
-import { beforeUserCreated } from "firebase-functions/v2/identity";
+import {beforeUserCreated, HttpsError} from "firebase-functions/v2/identity";
 import axios from "axios";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:8080";
@@ -23,5 +23,6 @@ export const processNewUser = beforeUserCreated({ secrets: ["INTERNAL_SECRET"] }
     } catch (err) {
         // Log but don't block registration — /auth/signin will upsert as fallback
         console.error("Failed to sync new user to backend:", err);
+        throw new HttpsError("internal", "Registration temporarily unavailable.");
     }
 });
