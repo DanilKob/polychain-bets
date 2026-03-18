@@ -61,7 +61,7 @@ Free tier: 50K monthly active users — no cost for dev projects.
 | Variable | Used by | Description |
 |---|---|---|
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Spring Boot (`FirebaseConfig.kt`) | Full JSON content of the service account key. Allows the backend to verify Firebase ID tokens. |
-| `INTERNAL_SECRET` | Spring Boot + Cloud Function | Shared secret sent as `X-Internal-Secret` header. Protects `/internal/users` from public access. |
+| `INTERNAL_SECRET` | Spring Boot + Cloud Function | Shared secret sent as `X-Internal-Secret` header. Protects `/firebase/users` from public access. |
 | `BACKEND_URL` | Cloud Function (`index.ts`) | Base URL of the Spring Boot backend. Defaults to `http://localhost:8080`. |
 | `MONGODB_URI` | Spring Boot | MongoDB connection string. Defaults to `mongodb://localhost:27017/polychain-bets`. |
 
@@ -187,7 +187,7 @@ import { connectAuthEmulator } from "https://www.gstatic.com/firebasejs/10.12.0/
 if (auth) connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
 ```
 
-Then use the **Registration tab** (email/password) — this fires `beforeUserCreated` → calls `POST /internal/users` on your backend.
+Then use the **Registration tab** (email/password) — this fires `beforeUserCreated` → calls `POST /firebase/users` on your backend.
 
 ### Google Sign-In does not work with the emulator
 

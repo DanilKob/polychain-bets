@@ -20,8 +20,8 @@ private val logger = KotlinLogging.logger {}
  * Protected by a shared secret — never exposed to clients.
  */
 @RestController
-@RequestMapping("/internal")
-class InternalUserController(
+@RequestMapping("/firebase")
+class FirebaseController(
     private val userService: UserService,
     @Value("\${internal.secret}") private val internalSecret: String
 ) {
@@ -32,7 +32,7 @@ class InternalUserController(
         @RequestBody event: JsonNode
     ): ResponseEntity<Unit> {
         if (secret != internalSecret) {
-            logger.warn { "Rejected /internal/users call with invalid secret" }
+            logger.warn { "Rejected /firebase/users call with invalid secret" }
             return ResponseEntity.status(401).build()
         }
         check (event.has("data"), {"User data missing"})

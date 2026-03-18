@@ -1,7 +1,7 @@
 # `beforeUserCreated` Event Structure
 
 Reference for all fields available in the `processNewUser` blocking function.
-Use this to decide which fields to forward to the backend via `POST /internal/users`.
+Use this to decide which fields to forward to the backend via `POST /firebase/users`.
 
 ```typescript
 export const processNewUser = beforeUserCreated({ secrets: ["INTERNAL_SECRET"] }, async (event) => {

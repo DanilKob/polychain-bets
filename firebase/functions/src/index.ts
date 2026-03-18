@@ -13,7 +13,7 @@ export const processNewUser = beforeUserCreated({ secrets: ["INTERNAL_SECRET"] }
 
     try {
         await axios.post(
-            `${BACKEND_URL}/internal/users`,
+            `${BACKEND_URL}/firebase/users`,
             { ...safeEventContext, data: safeUser },
             {
                 headers: { "X-Internal-Secret": process.env.INTERNAL_SECRET },

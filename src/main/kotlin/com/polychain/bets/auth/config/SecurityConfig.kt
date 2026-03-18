@@ -19,7 +19,7 @@ class SecurityConfig(private val firebaseAuthFilter: FirebaseAuthFilter) {
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
-                it.requestMatchers("/internal/**").permitAll() // protected by X-Internal-Secret header
+                it.requestMatchers("/firebase/**").permitAll() // protected by X-Internal-Secret header
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(firebaseAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

@@ -12,7 +12,7 @@ exports.processNewUser = (0, identity_1.beforeUserCreated)({ secrets: ["INTERNAL
     const { credential, ...safeEventContext } = event;
     const { passwordHash, passwordSalt, ...safeUser } = user;
     try {
-        await axios_1.default.post(`${BACKEND_URL}/internal/users`, { ...safeEventContext, data: safeUser }, {
+        await axios_1.default.post(`${BACKEND_URL}/firebase/users`, { ...safeEventContext, data: safeUser }, {
             headers: { "X-Internal-Secret": process.env.INTERNAL_SECRET },
             timeout: 5000,
         });

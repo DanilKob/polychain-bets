@@ -25,7 +25,7 @@ class FirebaseAuthFilter(
         chain: FilterChain
     ) {
         // Internal routes are protected by X-Internal-Secret, not Firebase tokens
-        if (request.requestURI.startsWith("/internal/")) {
+        if (request.requestURI.startsWith("/firebase/")) {
             chain.doFilter(request, response)
             return
         }
