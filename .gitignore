@@ -39,3 +39,4 @@ auth-poluchain-firebase-adminsdk-fbsvc-4748a88e98.json
 # Configuration
 .env
 firebase/functions/.env
+firebase/functions/.env.*
