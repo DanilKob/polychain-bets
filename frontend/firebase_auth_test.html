@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Firebase Auth · Dev Testbed</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  /* =========================================================
+     🔧 ТВОИ FIREBASE РЕКВИЗИТЫ — ВСТАВЬ СЮДА
+     Project Settings → General → Your apps → SDK setup
+     ========================================================= */
+
+  :root {
+    --fb-api-key:              "YOUR_API_KEY";
+    --fb-auth-domain:          "YOUR_PROJECT_ID.firebaseapp.com";
+    --fb-project-id:           "YOUR_PROJECT_ID";
+    --fb-storage-bucket:       "YOUR_PROJECT_ID.appspot.com";
+    --fb-messaging-sender-id:  "YOUR_SENDER_ID";
+    --fb-app-id:               "YOUR_APP_ID";
+  }
+
+  /* =========================================================
+     DESIGN SYSTEM
+     ========================================================= */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #0a0a0f;
+    --surface:    #111118;
+    --card:       #16161f;
+    --border:     #252535;
+    --border-hi:  #3a3a55;
+    --accent:     #4f6ef7;
+    --accent-dim: rgba(79,110,247,.15);
+    --accent-glow:rgba(79,110,247,.35);
+    --green:      #22d67a;
+    --green-dim:  rgba(34,214,122,.12);
+    --red:        #ff4f6a;
+    --red-dim:    rgba(255,79,106,.12);
+    --amber:      #f5a623;
+    --amber-dim:  rgba(245,166,35,.12);
+    --text:       #e8e8f0;
+    --text-muted: #6b6b88;
+    --text-dim:   #3d3d55;
+    --mono:       'JetBrains Mono', monospace;
+    --sans:       'Space Grotesk', sans-serif;
+    --radius:     12px;
+    --radius-sm:  8px;
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid noise background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(79,110,247,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,110,247,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* Glow orb */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(79,110,247,.12) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .layout {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    min-height: 100vh;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* =========================================================
+     LEFT PANEL — Auth Card
+     ========================================================= */
+  .auth-panel {
+    position: sticky;
+    top: 40px;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(79,110,247,.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .badge::before { content: '●'; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -.5px;
+    line-height: 1.2;
+    margin-bottom: 6px;
+    color: #fff;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--border-hi); }
+
+  /* Tab nav */
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 14px 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    text-align: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    border: none;
+    background: none;
+    transition: all .2s;
+    position: relative;
+  }
+  .tab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 20%; right: 20%;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .tab.active { color: var(--accent); }
+  .tab.active::after { opacity: 1; }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* Form */
+  .form-body { padding: 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  input[type=email], input[type=password], input[type=text] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  input::placeholder { color: var(--text-dim); }
+
+  .btn {
+    width: 100%;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #6070f8; transform: translateY(-1px); box-shadow: 0 4px 20px var(--accent-glow); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-google {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  .btn-google:hover { border-color: var(--border-hi); background: #1a1a25; }
+  .btn-google svg { flex-shrink: 0; }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .link-btn {
+    background: none; border: none;
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .link-btn:hover { color: #7080f9; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+  }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn.loading .spinner { display: block; }
+  .btn.loading .btn-text { opacity: 0; }
+
+  /* =========================================================
+     RIGHT PANEL — Output
+     ========================================================= */
+  .output-panel { display: flex; flex-direction: column; gap: 20px; }
+
+  .panel-header {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-header::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .panel-header.green::before { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .panel-header.red::before   { background: var(--red);   box-shadow: 0 0 6px var(--red); }
+
+  /* Status card */
+  .status-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .status-idle   { border-left: 3px solid var(--border-hi); }
+  .status-ok     { border-left: 3px solid var(--green); background: var(--green-dim); border-color: rgba(34,214,122,.25); }
+  .status-error  { border-left: 3px solid var(--red);   background: var(--red-dim);   border-color: rgba(255,79,106,.25); }
+  .status-info   { border-left: 3px solid var(--amber); background: var(--amber-dim); border-color: rgba(245,166,35,.25); }
+
+  .status-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .status-ok    .status-label { color: var(--green); }
+  .status-error .status-label { color: var(--red); }
+  .status-info  .status-label { color: var(--amber); }
+  .status-idle  .status-label { color: var(--text-muted); }
+
+  .status-message {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  /* Token block */
+  .token-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .token-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .token-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .copy-btn {
+    background: var(--accent-dim);
+    border: 1px solid rgba(79,110,247,.3);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .copy-btn:hover { background: rgba(79,110,247,.25); }
+  .copy-btn.copied { background: var(--green-dim); border-color: rgba(34,214,122,.4); color: var(--green); }
+
+  .token-value {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    word-break: break-all;
+    line-height: 1.7;
+    max-height: 160px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .token-value.empty { color: var(--text-dim); font-style: italic; }
+
+  /* User info */
+  .user-info {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .info-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-key {
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--surface);
+    display: flex; align-items: center;
+  }
+  .info-val {
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+    display: flex; align-items: center;
+  }
+  .info-val.verified { color: var(--green); }
+  .info-val.unverified { color: var(--amber); }
+
+  /* Curl block */
+  .curl-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .curl-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .curl-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .curl-code {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: #aaa;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .curl-code .kw  { color: var(--accent); }
+  .curl-code .str { color: var(--green); }
+  .curl-code .var { color: var(--amber); }
+
+  /* Config warning */
+  .config-warn {
+    background: var(--amber-dim);
+    border: 1px solid rgba(245,166,35,.3);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--amber);
+    line-height: 1.6;
+    display: none;
+  }
+  .config-warn.show { display: block; }
+  .config-warn strong { display: block; margin-bottom: 4px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+
+  .logout-btn {
+    background: var(--red-dim);
+    border: 1px solid rgba(255,79,106,.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--red);
+    cursor: pointer;
+    transition: all .15s;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .logout-btn:hover { background: rgba(255,79,106,.2); }
+
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; }
+    .auth-panel { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- =================== LEFT: AUTH CARD =================== -->
+  <div class="auth-panel">
+    <div class="badge">🔥 Firebase Auth Testbed</div>
+    <h1>Auth Dev Console</h1>
+    <p class="subtitle">Тестирование Firebase Authentication.<br>Google · Email/Password · Сброс пароля</p>
+
+    <div id="configWarn" class="config-warn show">
+      <strong>⚠ Config not set</strong>
+      Замени placeholder-значения в JS-блоке внизу страницы (firebaseConfig) на реальные из Firebase Console → Project Settings.
+    </div>
+
+    <br/>
+
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login')">Войти</button>
+        <button class="tab" onclick="switchTab('register')">Регистрация</button>
+        <button class="tab" onclick="switchTab('reset')">Сброс</button>
+      </div>
+
+      <div class="form-body">
+
+        <!-- LOGIN -->
+        <div id="view-login" class="view active">
+          <button class="btn btn-google" onclick="signInGoogle()">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C12.955 4 4 12.955 4 24s8.955 20 20 20s20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4C16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002l6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+            <span class="btn-text">Войти через Google</span>
+            <span class="spinner"></span>
+          </button>
+
+          <div class="divider">или</div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="dev@example.com"/>
+          </div>
+          <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')signInEmail()"/>
+          </div>
+          <button class="btn btn-primary" onclick="signInEmail()">
+            <span class="btn-text">Войти</span>
+            <span class="spinner"></span>
+          </button>
+          <p class="hint">Нет аккаунта? <button class="link-btn" onclick="switchTab('register')">Зарегистрироваться</button></p>
+        </div>
+
+        <!-- REGISTER -->
+        <div id="view-register" class="view">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="regEmail" placeholder="dev@example.com"/>
+          </div>
+          <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="regPassword" placeholder="мин. 6 символов"/>
+          </div>
+          <div class="form-group">
+            <label>Имя (опционально)</label>
+            <input type="text" id="regName" placeholder="Ivan Petrov"/>
+          </div>
+          <button class="btn btn-primary" onclick="registerEmail()">
+            <span class="btn-text">Создать аккаунт</span>
+            <span class="spinner"></span>
+          </button>
+          <p class="hint">Есть аккаунт? <button class="link-btn" onclick="switchTab('login')">Войти</button></p>
+        </div>
+
+        <!-- RESET -->
+        <div id="view-reset" class="view">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+            Введи email — Firebase отправит письмо со ссылкой для сброса пароля.
+          </p>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="resetEmail" placeholder="dev@example.com"/>
+          </div>
+          <button class="btn btn-primary" onclick="resetPassword()">
+            <span class="btn-text">Отправить письмо</span>
+            <span class="spinner"></span>
+          </button>
+          <p class="hint"><button class="link-btn" onclick="switchTab('login')">← Назад к входу</button></p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== RIGHT: OUTPUT =================== -->
+  <div class="output-panel">
+
+    <!-- Status -->
+    <div>
+      <div class="panel-header" id="statusHeader">Статус</div>
+      <div class="status-card status-idle" id="statusCard">
+        <div class="status-label">WAITING</div>
+        <div class="status-message">Выполни любое действие слева — здесь появится результат.</div>
+      </div>
+    </div>
+
+    <!-- User Info (hidden until auth) -->
+    <div id="userInfoBlock" style="display:none">
+      <div class="panel-header green">Пользователь аутентифицирован</div>
+      <div class="user-info" id="userInfoTable"></div>
+      <button class="logout-btn" onclick="doSignOut()">⏻  Выйти из аккаунта</button>
+    </div>
+
+    <!-- JWT Token -->
+    <div>
+      <div class="panel-header" id="tokenHeader">JWT · ID Token</div>
+      <div class="token-block">
+        <div class="token-header">
+          <span class="token-title">Bearer Token</span>
+          <button class="copy-btn" id="copyBtn" onclick="copyToken()">Copy</button>
+        </div>
+        <div class="token-value empty" id="tokenValue">— токен появится после авторизации —</div>
+      </div>
+    </div>
+
+    <!-- cURL snippet -->
+    <div id="curlBlock" style="display:none">
+      <div class="panel-header">Готовый curl для тестирования бекенда</div>
+      <div class="curl-block">
+        <div class="curl-header">
+          <span class="curl-title">curl · Spring endpoint</span>
+          <button class="copy-btn" id="curlCopyBtn" onclick="copyCurl()">Copy</button>
+        </div>
+        <div class="curl-code" id="curlCode"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- =================== FIREBASE SDK =================== -->
+<script type="module">
+  import { initializeApp }                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, connectAuthEmulator, signInWithPopup, GoogleAuthProvider,
+           createUserWithEmailAndPassword, signInWithEmailAndPassword,
+           sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged, signOut,
+           updateProfile }                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  /* ============================================================
+     Firebase Console → Project Settings → Your apps → Config
+     ============================================================ */
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyCeNkSCRRKtrzpv0wIWf2iFRbmpXwEUr_w",
+    authDomain: "auth-poluchain.firebaseapp.com",
+    projectId: "auth-poluchain",
+    storageBucket: "auth-poluchain.firebasestorage.app",
+    messagingSenderId: "732362708273",
+    appId: "1:732362708273:web:e737435e330cb866fc8c10",
+    measurementId: "G-9XKMJ21C5K"
+  };
+  /* ============================================================ */
+
+  // Проверка конфига
+  const isConfigured = !Object.values(firebaseConfig).some(v => v.startsWith("YOUR_"));
+  if (isConfigured) {
+    document.getElementById('configWarn').classList.remove('show');
+  }
+
+  const app  = isConfigured ? initializeApp(firebaseConfig) : null;
+  const auth = app ? getAuth(app) : null;
+  // EMULATOR
+  // if (auth) connectAuthEmulator(auth, "http://localhost:9099", { disableWarnings: true });
+  const googleProvider = app ? new GoogleAuthProvider() : null;
+
+  // ── Утилиты UI ──────────────────────────────────────────────
+  function setStatus(type, label, message) {
+    const card = document.getElementById('statusCard');
+    const header = document.getElementById('statusHeader');
+    card.className = `status-card status-${type}`;
+    card.innerHTML = `<div class="status-label">${label}</div><div class="status-message">${message}</div>`;
+    header.className = `panel-header ${type === 'ok' ? 'green' : type === 'error' ? 'red' : ''}`;
+    header.textContent = 'Статус';
+  }
+
+  function setLoading(btn, loading) {
+    btn.classList.toggle('loading', loading);
+    btn.disabled = loading;
+  }
+
+  async function handleUser(user) {
+    if (!user) {
+      document.getElementById('userInfoBlock').style.display = 'none';
+      document.getElementById('curlBlock').style.display = 'none';
+      document.getElementById('tokenHeader').className = 'panel-header';
+      setTokenEmpty();
+      return;
+    }
+
+    // Get token
+    const token = await user.getIdToken(true);
+    const providers = user.providerData.map(p => p.providerId).join(', ');
+
+    // User info table
+    document.getElementById('userInfoBlock').style.display = 'block';
+    document.getElementById('userInfoTable').innerHTML = `
+      <div class="info-row"><span class="info-key">UID</span><span class="info-val">${user.uid}</span></div>
+      <div class="info-row"><span class="info-key">Email</span><span class="info-val">${user.email || '—'}</span></div>
+      <div class="info-row"><span class="info-key">Name</span><span class="info-val">${user.displayName || '—'}</span></div>
+      <div class="info-row"><span class="info-key">Provider</span><span class="info-val">${providers}</span></div>
+      <div class="info-row"><span class="info-key">Verified</span><span class="info-val ${user.emailVerified ? 'verified' : 'unverified'}">${user.emailVerified ? '✓ YES' : '✗ NO'}</span></div>
+    `;
+
+    // Token
+    const tv = document.getElementById('tokenValue');
+    tv.textContent = token;
+    tv.classList.remove('empty');
+    document.getElementById('tokenHeader').className = 'panel-header green';
+
+    // cURL
+    document.getElementById('curlBlock').style.display = 'block';
+    renderCurl(token);
+  }
+
+  function setTokenEmpty() {
+    const tv = document.getElementById('tokenValue');
+    tv.textContent = '— токен появится после авторизации —';
+    tv.classList.add('empty');
+  }
+
+  function renderCurl(token) {
+    document.getElementById('curlCode').innerHTML =
+      `<span class="kw">curl</span> -X GET \\\n` +
+      `  <span class="str">http://localhost:8080/api/me</span> \\\n` +
+      `  -H <span class="str">"Authorization: Bearer <span class="var">${token.substring(0,40)}...</span>"</span> \\\n` +
+      `  -H <span class="str">"Content-Type: application/json"</span>`;
+
+    // Store full token for copy
+    document.getElementById('curlCopyBtn').dataset.full =
+      `curl -X GET \\\n  http://localhost:8080/api/me \\\n  -H "Authorization: Bearer ${token}" \\\n  -H "Content-Type: application/json"`;
+  }
+
+  // ── Auth state listener ─────────────────────────────────────
+  if (auth) {
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        setStatus('ok', 'AUTHENTICATED', `Добро пожаловать, ${user.displayName || user.email}`);
+        handleUser(user);
+      } else {
+        handleUser(null);
+      }
+    });
+  }
+
+  // ── Actions ─────────────────────────────────────────────────
+  window.signInGoogle = async () => {
+    if (!auth) { setStatus('error', 'CONFIG ERROR', 'Сначала вставь firebaseConfig в код страницы.'); return; }
+    const btns = document.querySelectorAll('.btn-google');
+    btns.forEach(b => setLoading(b, true));
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setStatus('ok', 'GOOGLE OK', `Вошёл как ${result.user.email}`);
+    } catch(e) {
+      setStatus('error', 'GOOGLE ERROR', e.message);
+    } finally {
+      btns.forEach(b => setLoading(b, false));
+    }
+  };
+
+  window.signInEmail = async () => {
+    if (!auth) { setStatus('error', 'CONFIG ERROR', 'Сначала вставь firebaseConfig.'); return; }
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass  = document.getElementById('loginPassword').value;
+    if (!email || !pass) { setStatus('error', 'VALIDATION', 'Заполни email и пароль.'); return; }
+    const btn = document.querySelector('#view-login .btn-primary');
+    setLoading(btn, true);
+    try {
+      const result = await signInWithEmailAndPassword(auth, email, pass);
+      setStatus('ok', 'LOGIN OK', `Вошёл как ${result.user.email}`);
+    } catch(e) {
+      const msgs = {
+        'auth/wrong-password': 'Неверный пароль.',
+        'auth/user-not-found': 'Пользователь не найден.',
+        'auth/invalid-email':  'Некорректный email.',
+        'auth/too-many-requests': 'Слишком много попыток. Подожди немного.',
+      };
+      setStatus('error', 'LOGIN ERROR', msgs[e.code] || e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  };
+
+  window.registerEmail = async () => {
+    if (!auth) { setStatus('error', 'CONFIG ERROR', 'Сначала вставь firebaseConfig.'); return; }
+    const email = document.getElementById('regEmail').value.trim();
+    const pass  = document.getElementById('regPassword').value;
+    const name  = document.getElementById('regName').value.trim();
+    if (!email || !pass) { setStatus('error', 'VALIDATION', 'Заполни email и пароль.'); return; }
+    const btn = document.querySelector('#view-register .btn-primary');
+    setLoading(btn, true);
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, pass);
+      if (name) await updateProfile(result.user, { displayName: name });
+      await sendEmailVerification(result.user);
+      setStatus('ok', 'REGISTERED', `Аккаунт создан: ${result.user.email}. Письмо с верификацией отправлено.`);
+    } catch(e) {
+      const msgs = {
+        'auth/email-already-in-use': 'Email уже зарегистрирован.',
+        'auth/weak-password':        'Пароль слишком слабый (мин. 6 символов).',
+        'auth/invalid-email':        'Некорректный email.',
+      };
+      setStatus('error', 'REGISTER ERROR', msgs[e.code] || e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  };
+
+  window.resetPassword = async () => {
+    if (!auth) { setStatus('error', 'CONFIG ERROR', 'Сначала вставь firebaseConfig.'); return; }
+    const email = document.getElementById('resetEmail').value.trim();
+    if (!email) { setStatus('error', 'VALIDATION', 'Введи email.'); return; }
+    const btn = document.querySelector('#view-reset .btn-primary');
+    setLoading(btn, true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setStatus('info', 'EMAIL SENT', `Письмо отправлено на ${email}. Проверь почту (и папку Spam).`);
+    } catch(e) {
+      const msgs = {
+        'auth/user-not-found': 'Пользователь с таким email не найден.',
+        'auth/invalid-email':  'Некорректный email.',
+      };
+      setStatus('error', 'RESET ERROR', msgs[e.code] || e.message);
+    } finally {
+      setLoading(btn, false);
+    }
+  };
+
+  window.doSignOut = async () => {
+    if (auth) {
+      await signOut(auth);
+      setStatus('idle', 'SIGNED OUT', 'Ты вышел из аккаунта.');
+    }
+  };
+
+  // ── Clipboard ───────────────────────────────────────────────
+  window.copyToken = () => {
+    const val = document.getElementById('tokenValue').textContent;
+    if (val.startsWith('—')) return;
+    navigator.clipboard.writeText(val);
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  };
+
+  window.copyCurl = () => {
+    const btn = document.getElementById('curlCopyBtn');
+    navigator.clipboard.writeText(btn.dataset.full || '');
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  };
+</script>
+
+<!-- ── Tab switching ── -->
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((t,i) => {
+      const names = ['login','register','reset'];
+      t.classList.toggle('active', names[i] === name);
+    });
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${name}`).classList.add('active');
+  }
+</script>
+
+</body>
+</html>

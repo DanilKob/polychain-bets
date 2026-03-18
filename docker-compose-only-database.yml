@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  mongodb:
+    image: mongo:8.0.3
+    container_name: polychain-firebase-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: polychain-user
+      MONGO_INITDB_ROOT_PASSWORD: polychain-password
+      MONGO_INITDB_DATABASE: polychain-auth
+    ports:
+      - "27019:27017"
+#    volumes:
+#      - mongodb-data:/data/db
+    networks:
+      - mongo_network
+networks:
+  mongo_network:
+    driver: bridge

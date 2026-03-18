@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "dev": "auth-poluchain",
+    "auth-polychain": "auth-poluchain",
+    "default": "auth-poluchain"
+  },
+  "targets": {},
+  "etags": {}
+}
