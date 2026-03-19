@@ -2,7 +2,7 @@ import './style.css';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import { doSignOut } from './auth';
-import { signInBackend, type UserProfile } from './api';
+import { fetchHomepageInit, type HomepageInitResponse } from './api';
 
 onAuthStateChanged(auth, async user => {
   if (!user) {
@@ -13,9 +13,9 @@ onAuthStateChanged(auth, async user => {
   renderUser(user.displayName, user.email, user.photoURL);
 
   try {
-    const token   = await user.getIdToken();
-    const profile = await signInBackend(token);
-    renderProfile(profile);
+    const token    = await user.getIdToken();
+    const response = await fetchHomepageInit(token);
+    renderProfile(response);
   } catch (e: unknown) {
     showError((e as Error).message);
   }
@@ -36,12 +36,13 @@ function renderUser(name: string | null, email: string | null, photo: string | n
   userEmail.textContent = email ?? '—';
 }
 
-function renderProfile(profile: UserProfile): void {
+function renderProfile(response: HomepageInitResponse): void {
+  const { user } = response;
   const block = document.getElementById('profileBlock')!;
   block.innerHTML = `
-    <div class="info-row"><span class="info-key">UID</span><span class="info-val">${profile.uid}</span></div>
-    <div class="info-row"><span class="info-key">Email</span><span class="info-val">${profile.email ?? '—'}</span></div>
-    <div class="info-row"><span class="info-key">Name</span><span class="info-val">${profile.displayName ?? '—'}</span></div>
+    <div class="info-row"><span class="info-key">UID</span><span class="info-val">${user.uid}</span></div>
+    <div class="info-row"><span class="info-key">Email</span><span class="info-val">${user.email ?? '—'}</span></div>
+    <div class="info-row"><span class="info-key">Name</span><span class="info-val">${user.displayName ?? '—'}</span></div>
   `;
   document.getElementById('backendStatus')!.className = 'status-card status-ok';
   document.getElementById('backendStatus')!.innerHTML =

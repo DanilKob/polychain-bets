@@ -62,7 +62,7 @@ function renderCurl(token: string): void {
   curlFullToken = token;
   document.getElementById('curlCode')!.innerHTML =
     `<span class="kw">curl</span> -X POST \\\n` +
-    `  <span class="str">http://localhost:8080/auth/signin</span> \\\n` +
+    `  <span class="str">http://localhost:8080/homepage/init</span> \\\n` +
     `  -H <span class="str">"Authorization: Bearer <span class="var">${token.substring(0, 40)}...</span>"</span> \\\n` +
     `  -H <span class="str">"Content-Type: application/json"</span>`;
 }
@@ -76,7 +76,7 @@ export function copyToken(): void {
 
 export function copyCurl(): void {
   if (!curlFullToken) return;
-  const full = `curl -X POST \\\n  http://localhost:8080/auth/signin \\\n  -H "Authorization: Bearer ${curlFullToken}" \\\n  -H "Content-Type: application/json"`;
+  const full = `curl -X POST \\\n  http://localhost:8080/homepage/init \\\n  -H "Authorization: Bearer ${curlFullToken}" \\\n  -H "Content-Type: application/json"`;
   navigator.clipboard.writeText(full);
   flashCopied(document.getElementById('curlCopyBtn')!);
 }

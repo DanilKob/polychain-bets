@@ -12,6 +12,10 @@ private val logger = KotlinLogging.logger {}
 @Service
 class UserService(private val userRepository: UserRepository) {
 
+    fun findByUid(uid: String): User? {
+        return userRepository.findByUid(uid)
+    }
+
     fun findOrCreate(
         userCreateDto: UserCreateDto
     ): User {

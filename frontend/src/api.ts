@@ -1,13 +1,24 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
 
-export interface UserProfile {
+export interface UserForInitResponse {
   uid: string;
   email: string | null;
   displayName: string | null;
 }
 
-export async function signInBackend(idToken: string): Promise<UserProfile> {
-  const response = await fetch(`${BACKEND_URL}/auth/signin`, {
+export interface FeedDto {
+  id: string;
+  title: string;
+  content: string;
+}
+
+export interface HomepageInitResponse {
+  user: UserForInitResponse;
+  feed: FeedDto[];
+}
+
+export async function fetchHomepageInit(idToken: string): Promise<HomepageInitResponse> {
+  const response = await fetch(`${BACKEND_URL}/homepage/init`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${idToken}`,
@@ -16,8 +27,8 @@ export async function signInBackend(idToken: string): Promise<UserProfile> {
   });
 
   if (!response.ok) {
-    throw new Error(`Backend /auth/signin failed: ${response.status}`);
+    throw new Error(`Backend /homepage/init failed: ${response.status}`);
   }
 
-  return response.json() as Promise<UserProfile>;
+  return response.json() as Promise<HomepageInitResponse>;
 }
