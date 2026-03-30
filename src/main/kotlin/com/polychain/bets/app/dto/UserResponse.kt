@@ -1,6 +1,6 @@
 package com.polychain.bets.app.dto
 
-data class UserForInitResponse(
+data class UserResponse(
     val uid: String,
     val email: String?,
     val displayName: String?

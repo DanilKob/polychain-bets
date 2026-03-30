@@ -1,8 +1,8 @@
 package com.polychain.bets.auth.service
 
 import com.polychain.bets.auth.entity.UserCreateDto
-import com.polychain.bets.core.entity.User
-import com.polychain.bets.core.repository.UserRepository
+import com.polychain.bets.core.entity.UserEntity
+import com.polychain.bets.core.repository.UserRepositoryInterface
 import mu.KotlinLogging
 import org.springframework.stereotype.Service
 import java.time.Instant
@@ -10,18 +10,15 @@ import java.time.Instant
 private val logger = KotlinLogging.logger {}
 
 @Service
-class UserService(private val userRepository: UserRepository) {
+class UserService(private val userRepository: UserRepositoryInterface) {
 
-    fun findByUid(uid: String): User? {
-        return userRepository.findByUid(uid)
-    }
+    suspend fun findByUid(uid: String): UserEntity? =
+        userRepository.findById(uid)
 
-    fun findOrCreate(
-        userCreateDto: UserCreateDto
-    ): User {
+    suspend fun findOrCreate(userCreateDto: UserCreateDto): UserEntity {
         val uid = userCreateDto.uid
         val provider = userCreateDto.provider
-        val existing = userRepository.findByUid(uid)
+        val existing = userRepository.findById(uid)
         if (existing != null) {
             // Apple only sends displayName on first registration (via beforeCreate blocking function).
             // If it arrives later via /auth/signin fallback, persist it.
@@ -32,7 +29,7 @@ class UserService(private val userRepository: UserRepository) {
         }
         logger.info { "Creating new user uid=$uid provider=$provider" }
         return userRepository.save(
-            User(
+            UserEntity(
                 uid = uid,
                 email = userCreateDto.email,
                 displayName = userCreateDto.displayName,

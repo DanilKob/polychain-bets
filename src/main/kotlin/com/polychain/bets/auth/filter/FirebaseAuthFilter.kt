@@ -7,6 +7,7 @@ import com.polychain.bets.auth.entity.FirebasePrincipal
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import mu.KotlinLogging
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
@@ -18,6 +19,7 @@ class FirebaseAuthFilter(
     private val firebaseAuth: FirebaseAuth,
     private val objectMapper: ObjectMapper
 ) : OncePerRequestFilter() {
+    private val logger = KotlinLogging.logger {}
 
     override fun doFilterInternal(
         request: HttpServletRequest,
@@ -54,6 +56,7 @@ class FirebaseAuthFilter(
                     UsernamePasswordAuthenticationToken(principal, null, emptyList())
 
             } catch (e: FirebaseAuthException) {
+                logger.error(e) { "Firebase token verification failed" }
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token")
                 return
             }

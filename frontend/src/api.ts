@@ -1,34 +1,90 @@
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8080';
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:8088';
 
-export interface UserForInitResponse {
+// ── User ─────────────────────────────────────────────────────────────────────
+
+export interface UserResponse {
   uid: string;
   email: string | null;
   displayName: string | null;
 }
 
-export interface FeedDto {
+// ── Feed ─────────────────────────────────────────────────────────────────────
+
+export interface OutcomeDto {
   id: string;
-  title: string;
-  content: string;
+  wagerId: string;
+  description: string;
 }
 
-export interface HomepageInitResponse {
-  user: UserForInitResponse;
-  feed: FeedDto[];
+export interface MediaDto {
+  id: string;
+  videoId: string;
+  videoToken: string;
+  thumbnailUrl: string;
+  previewUrl: string;
+  hlsUrl: string;
+  durationSeconds: number;
+  width: number;
+  height: number;
 }
 
-export async function fetchHomepageInit(idToken: string): Promise<HomepageInitResponse> {
-  const response = await fetch(`${BACKEND_URL}/homepage/init`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${idToken}`,
-      'Content-Type': 'application/json',
-    },
+export interface FeedItem {
+  id: string;
+  name: string;
+  text: string;
+  createdAt: string;
+  media: MediaDto;
+  outcomes: OutcomeDto[];
+}
+
+export interface FeedResponse {
+  items: FeedItem[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  count: number;
+}
+
+// ── Homepage ──────────────────────────────────────────────────────────────────
+
+export interface HomepageResponse {
+  user: UserResponse;
+  feed: FeedResponse;
+}
+
+// ── Requests ──────────────────────────────────────────────────────────────────
+
+async function authorizedGet<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${path}`, {
+    headers: { 'Authorization': `Bearer ${token}` },
   });
+  if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
 
-  if (!response.ok) {
-    throw new Error(`Backend /homepage/init failed: ${response.status}`);
-  }
+export async function syncUser(token: string): Promise<UserResponse> {
+  const res = await fetch(`${BACKEND_URL}/auth/signin`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`/auth/signin failed: ${res.status}`);
+  return res.json() as Promise<UserResponse>;
+}
 
-  return response.json() as Promise<HomepageInitResponse>;
+export async function fetchHomepage(token: string): Promise<HomepageResponse> {
+  return authorizedGet<HomepageResponse>('/api/v1/homepage', token);
+}
+
+export async function fetchFeed(token: string, cursor?: string | null, limit = 5): Promise<FeedResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set('cursor', cursor);
+  return authorizedGet<FeedResponse>(`/api/v1/feed?${params}`, token);
+}
+
+export interface VideoTokenResponse {
+  token: string;
+  expirySeconds: number;
+}
+
+export async function fetchVideoToken(idToken: string, videoId: string): Promise<VideoTokenResponse> {
+  return authorizedGet<VideoTokenResponse>(`/api/v1/video/${videoId}/token`, idToken);
 }

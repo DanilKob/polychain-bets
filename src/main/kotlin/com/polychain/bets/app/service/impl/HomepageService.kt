@@ -1,10 +1,11 @@
 package com.polychain.bets.app.service.impl
 
-import com.polychain.bets.app.dto.HomepageInitResponse
-import com.polychain.bets.app.dto.UserForInitResponse
+import com.polychain.bets.app.dto.HomepageResponse
+import com.polychain.bets.app.dto.UserResponse
 import com.polychain.bets.app.service.HomepageServiceInterface
 import com.polychain.bets.auth.service.UserService
-import com.polychain.bets.config.CoroutineDispatcherHolder
+import com.polychain.bets.core.service.DEFAULT_PAGE_SIZE
+import com.polychain.bets.core.service.FeedService
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.springframework.stereotype.Service
@@ -12,23 +13,29 @@ import org.springframework.stereotype.Service
 @Service
 class HomepageService(
     private val userService: UserService,
-    private val coroutineDispatcherHolder: CoroutineDispatcherHolder
+    private val feedService: FeedService
 ) : HomepageServiceInterface {
 
-    override suspend fun init(
-        userId: String
-    ): HomepageInitResponse = coroutineScope {
-        val userAsync = async(coroutineDispatcherHolder.dbDispatcher) {
-            userService.findByUid(userId)
+    override suspend fun getHomepage(userId: String): HomepageResponse = coroutineScope {
+        val userAsync = async {
+            userService.findByUid(userId) ?: throw RuntimeException("User not found")
         }
-        val user = userAsync.await() ?: throw RuntimeException("User not found")
-        return@coroutineScope HomepageInitResponse(
-            user = UserForInitResponse(
+        val feedAsync = async {
+            feedService.getFeed(
+                tags = null,
+                encodedCursor = null,
+                limit = DEFAULT_PAGE_SIZE
+            )
+        }
+        val user = userAsync.await()
+        val feed = feedAsync.await()
+        return@coroutineScope HomepageResponse(
+            user = UserResponse(
                 uid = user.uid,
                 email = user.email,
                 displayName = user.displayName
             ),
-            feed = listOf()
+            feed = feed
         )
     }
 }

@@ -28,6 +28,8 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.requestMatchers("/firebase/**").permitAll() // protected by X-Internal-Secret header
+                it.requestMatchers("/debug/**").permitAll() // enable debugging endpoints
+                it.requestMatchers("/api/v1/video/**").permitAll()
                 it.anyRequest().authenticated()
             }
             .addFilterBefore(firebaseAuthFilter, UsernamePasswordAuthenticationFilter::class.java)

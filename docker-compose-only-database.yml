@@ -1,19 +1,141 @@
-version: '3'
+version: '3.9'
 
 services:
+  # Single-node MongoDB replica set.
+  # Replica set mode is required for MongoTransactionManager (multi-document transactions).
+  # The member is advertised as localhost:27017 so the Spring Boot app running on the host
+  # can discover the primary correctly via the connection string replicaSet=rs0.
   mongodb:
     image: mongo:8.0.3
-    container_name: polychain-firebase-mongo
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: polychain-user
-      MONGO_INITDB_ROOT_PASSWORD: polychain-password
-      MONGO_INITDB_DATABASE: polychain-auth
+    container_name: polychain-mongodb
+    entrypoint:
+      - bash
+      - -c
+      - |
+        chmod 400 /data/mongo-keyfile
+        chown 999:999 /data/mongo-keyfile
+        exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --port 27017 --keyFile /data/mongo-keyfile
     ports:
-      - "27019:27017"
-#    volumes:
-#      - mongodb-data:/data/db
-    networks:
-      - mongo_network
-networks:
-  mongo_network:
-    driver: bridge
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpassword
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-keyfile:/data/mongo-keyfile
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/admin -u admin -p adminpassword --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  mongodb-init:
+    image: mongo:8.0.3
+    container_name: polychain-mongodb-init
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mongosh --host mongodb:27017 \
+          -u admin -p adminpassword --authenticationDatabase admin \
+          --eval "
+            if (db.getSiblingDB('admin').system.users.findOne({user: 'polychain-user'})) {
+              print('Already initialised, skipping');
+              quit(0);
+            }
+
+            try { rs.status(); } catch(e) {
+              rs.initiate({_id:'rs0', members:[{_id:0, host:'localhost:27017'}]});
+              print('Replica set initiated, waiting for primary...');
+            }
+
+            let attempts = 0;
+            while (rs.status().myState !== 1) {
+              sleep(500);
+              if (++attempts > 30) { print('Timed out waiting for primary'); quit(1); }
+            }
+            print('Primary elected');
+
+            db = db.getSiblingDB('admin');
+            db.createUser({
+              user: 'polychain-user',
+              pwd:  'polychain-password',
+              roles: [
+                { role: 'readWrite', db: 'polychain-bets' },
+                { role: 'readWrite', db: 'polychain-media' }
+              ]
+            });
+            print('Polychain user created');
+            db.createUser({
+              user: 'polychain-media-user',
+              pwd:  'polychain-media-password',
+              roles: [
+                { role: 'readWrite', db: 'polychain-media' }
+              ]
+            });
+            print('Polychain media user created');
+
+            db.getSiblingDB('polychain-bets').init.insertOne({ _init: true });
+            db.getSiblingDB('polychain-media').init.insertOne({ _init: true });
+            print('Databases created');
+          "
+    restart: "no"
+
+  # Zookeeper is a distributed coordination service that Kafka depends on to function.
+  # It handles broker registration (tracks which Kafka brokers are alive), leader election
+  # (coordinates electing a new partition leader when one fails), topic/partition metadata
+  # storage, and consumer group coordination. Kafka brokers cannot start or operate without
+  # Zookeeper. It is essentially Kafka's nervous system for cluster state.
+  # Note: Kafka 3.3+ introduced KRaft mode which replaces Zookeeper with a built-in Raft
+  # consensus protocol, removing this external dependency. The Confluent 7.6 image used
+  # here still requires Zookeeper.
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: media-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    profiles:
+      - kafka
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: media-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    profiles:
+      - kafka
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: media-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8096:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    profiles:
+      - kafka
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  minio_data:

@@ -24,7 +24,7 @@ class AuthController(private val userService: UserService) {
      * and returns the user's profile.
      */
     @PostMapping("/signin")
-    fun signIn(@AuthenticationPrincipal principal: FirebasePrincipal): ResponseEntity<UserResponse> {
+    suspend fun signIn(@AuthenticationPrincipal principal: FirebasePrincipal): ResponseEntity<UserResponse> {
 
         val user = userService.findOrCreate(
             UserCreateDto(

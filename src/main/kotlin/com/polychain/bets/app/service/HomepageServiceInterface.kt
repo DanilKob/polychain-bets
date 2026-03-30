@@ -1,7 +1,7 @@
 package com.polychain.bets.app.service
 
-import com.polychain.bets.app.dto.HomepageInitResponse
+import com.polychain.bets.app.dto.HomepageResponse
 
 interface HomepageServiceInterface {
-    suspend fun init(userId: String) : HomepageInitResponse
+    suspend fun getHomepage(userId: String) : HomepageResponse
 }

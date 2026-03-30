@@ -2,6 +2,7 @@ package com.polychain.bets.auth.controller
 
 import com.polychain.bets.auth.entity.UserCreateDto
 import com.polychain.bets.auth.service.UserService
+import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.bson.Document
 import org.springframework.beans.factory.annotation.Value
@@ -30,10 +31,10 @@ class FirebaseController(
     fun createUser(
         @RequestHeader("X-Internal-Secret") secret: String?,
         @RequestBody event: JsonNode
-    ): ResponseEntity<Unit> {
+    ): ResponseEntity<Unit> = runBlocking {
         if (secret != internalSecret) {
             logger.warn { "Rejected /firebase/users call with invalid secret" }
-            return ResponseEntity.status(401).build()
+            return@runBlocking ResponseEntity.status(401).build()
         }
         check (event.has("data"), {"User data missing"})
         val user = event["data"]
@@ -51,6 +52,6 @@ class FirebaseController(
             )
         )
 
-        return ResponseEntity.ok().build()
+        return@runBlocking ResponseEntity.ok().build()
     }
 }

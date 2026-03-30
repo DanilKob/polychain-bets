@@ -28,8 +28,7 @@ body {
   font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
+  min-height: 100%;
 }
 
 body::before {
@@ -324,6 +323,98 @@ input::placeholder { color: var(--text-dim); }
   cursor: pointer; transition: all .15s; width: 100%; margin-top: 4px;
 }
 .logout-btn:hover { background: rgba(255,79,106,.2); }
+
+/* ── Feed ──────────────────────────────────────────────────────────────────── */
+
+#feedList { display: flex; flex-direction: column; gap: 16px; }
+
+.wager-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.wager-card:hover { border-color: var(--border-hi); }
+
+.wager-video-box {
+  position: relative;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  overflow: hidden;
+}
+
+.wager-video-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* zoom-out: full video visible, black fills the rest */
+  background: #000;
+  display: block;
+}
+
+.video-mute-badge {
+  position: absolute;
+  bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.wager-thumbnail-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+  font-family: var(--mono); font-size: 12px;
+}
+
+.wager-body { padding: 16px; }
+
+.wager-name {
+  font-size: 15px; font-weight: 600;
+  color: #fff; margin-bottom: 6px;
+}
+
+.wager-text {
+  font-size: 13px; color: var(--text-muted);
+  line-height: 1.5; margin-bottom: 12px;
+}
+
+.wager-outcomes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+.outcome-chip {
+  background: var(--accent-dim);
+  border: 1px solid rgba(79,110,247,.3);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px; color: var(--accent);
+  cursor: pointer;
+  transition: background .15s;
+}
+.outcome-chip:hover { background: rgba(79,110,247,.25); }
+
+.wager-meta {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+}
+.wager-meta-dot { color: var(--text-dim); }
+
+.feed-spinner {
+  display: none; justify-content: center; padding: 24px;
+}
+.feed-spinner.active { display: flex; }
+
+.feed-end-msg, .feed-empty-msg {
+  display: none; justify-content: center; padding: 24px;
+  font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.feed-end-msg.visible, .feed-empty-msg.visible { display: flex; }
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
 
 @media (max-width: 820px) {
   .layout { grid-template-columns: 1fr; }
