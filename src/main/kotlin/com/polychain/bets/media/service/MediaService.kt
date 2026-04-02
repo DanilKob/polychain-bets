@@ -4,7 +4,6 @@ import com.polychain.bets.core.dto.MediaDto
 import com.polychain.bets.core.entity.WagerMediaEntity
 import com.polychain.bets.core.repository.WagerMediaMongoRepository
 import com.polychain.bets.exception.NotFoundException
-import com.polychain.bets.media.config.MinioConfig
 import com.polychain.bets.media.entity.VideoQuality
 import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.stereotype.Service
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service
 class MediaService(
     private val videoStorageService: VideoStorageServiceInterface,
     private val contentPresignService: ContentPresignServiceInterface,
-    private val minioConfig: MinioConfig,
     private val wagerMediaMongoRepository: WagerMediaMongoRepository,
     private val videoTokenService: VideoTokenServiceInterface,
 ): MediaServiceInterface {

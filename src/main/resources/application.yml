@@ -7,6 +7,15 @@ app:
 spring:
   mongodb:
     uri: mongodb://polychain-user:polychain-password@localhost:27017/polychain-bets?authSource=admin
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5413/polychain-finance
+    username: polychain-finance-user
+    password: polychain-finance-password
+  flyway:
+    url: jdbc:postgresql://localhost:5413/polychain-finance
+    user: polychain-finance-user
+    password: polychain-finance-password
+    locations: classpath:db/migration
 
 mongodb:
   database: polychain-auth
@@ -34,14 +43,3 @@ video:
 
 platform:
   margin: ${PLATFORM_MARGIN:0.05}
-
-spring:
-  r2dbc:
-    url: r2dbc:postgresql://localhost:5413/polychain-finance
-    username: polychain-finance-user
-    password: polychain-finance-password
-  flyway:
-    url: jdbc:postgresql://localhost:5413/polychain-finance
-    user: polychain-finance-user
-    password: polychain-finance-password
-    locations: classpath:db/migration

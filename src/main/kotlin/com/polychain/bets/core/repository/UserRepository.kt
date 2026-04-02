@@ -2,7 +2,7 @@ package com.polychain.bets.core.repository
 
 import com.polychain.bets.core.entity.UserEntity
 import kotlinx.coroutines.reactive.awaitSingle
-import kotlinx.coroutines.reactive.awaitSingleOrNull
+import kotlinx.coroutines.reactor.awaitSingleOrNull
 import org.springframework.stereotype.Service
 
 @Service
