@@ -88,3 +88,25 @@ export interface VideoTokenResponse {
 export async function fetchVideoToken(idToken: string, videoId: string): Promise<VideoTokenResponse> {
   return authorizedGet<VideoTokenResponse>(`/api/v1/video/${videoId}/token`, idToken);
 }
+
+// ── Wager stats ───────────────────────────────────────────────────────────────
+
+export interface OutcomeStatsDto {
+  outcomeId: string;
+  pool: number;
+  voterCount: number;
+  coefficient: number;
+  poolSharePct: number;
+}
+
+export interface WagerStatsDto {
+  wagerId: string;
+  totalPool: number;
+  voterCount: number;
+  outcomes: OutcomeStatsDto[];
+  updatedAt: string;
+}
+
+export async function fetchWagerStats(token: string, wagerId: string): Promise<WagerStatsDto> {
+  return authorizedGet<WagerStatsDto>(`/api/v1/wager/${wagerId}/stats`, token);
+}

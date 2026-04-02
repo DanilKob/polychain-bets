@@ -3,7 +3,7 @@ import Hls from 'hls.js';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import { doSignOut } from './auth';
-import { fetchHomepage, fetchFeed, fetchVideoToken, BACKEND_URL, type FeedItem, type FeedResponse } from './api';
+import { fetchHomepage, fetchFeed, fetchVideoToken, fetchWagerStats, BACKEND_URL, type FeedItem, type FeedResponse, type WagerStatsDto } from './api';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
@@ -37,6 +37,16 @@ onAuthStateChanged(auth, async user => {
 document.getElementById('btnSignOut')!.addEventListener('click', async () => {
   await doSignOut();
   window.location.href = '/index.html';
+});
+
+// ── Bottom nav ────────────────────────────────────────────────────────────────
+
+const navBtns = document.querySelectorAll<HTMLButtonElement>('.nav-btn');
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    navBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
 });
 
 // ── Pagination sentinel ───────────────────────────────────────────────────────
@@ -96,6 +106,49 @@ const videoObserver = new IntersectionObserver(
   { threshold: 0.5 }
 );
 
+// ── Stats observer — fetch + poll while card is visible ───────────────────────
+
+const activePolls = new Map<string, number>();
+
+const statsObserver = new IntersectionObserver(
+  entries => {
+    entries.forEach(entry => {
+      const card = entry.target as HTMLElement;
+      const wagerId = card.dataset.wagerId!;
+      if (entry.isIntersecting) {
+        fetchAndRenderStats(card, wagerId);
+        const interval = window.setInterval(() => fetchAndRenderStats(card, wagerId), 5000);
+        activePolls.set(wagerId, interval);
+      } else {
+        const interval = activePolls.get(wagerId);
+        if (interval !== undefined) {
+          clearInterval(interval);
+          activePolls.delete(wagerId);
+        }
+      }
+    });
+  },
+  { threshold: 0.8 }
+);
+
+async function fetchAndRenderStats(card: HTMLElement, wagerId: string): Promise<void> {
+  try {
+    const stats = await fetchWagerStats(idToken, wagerId);
+    renderStats(card, stats);
+  } catch { /* silently ignore — stale UI is acceptable */ }
+}
+
+function renderStats(card: HTMLElement, stats: WagerStatsDto): void {
+  stats.outcomes.forEach(outcome => {
+    const chip = card.querySelector<HTMLElement>(`[data-outcome-id="${outcome.outcomeId}"]`);
+    if (!chip) return;
+    const coef = chip.querySelector('.outcome-coefficient');
+    const fill = chip.querySelector<HTMLElement>('.outcome-pool-fill');
+    if (coef) coef.textContent = `${Number(outcome.coefficient).toFixed(2)}x`;
+    if (fill) fill.style.width = `${outcome.poolSharePct}%`;
+  });
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 
 function renderUserPill(name: string | null, photoURL: string | null): void {
@@ -113,6 +166,7 @@ function buildCard(item: FeedItem, videoToken: string | null): HTMLElement {
   const card = document.createElement('div');
   card.className = 'wager-card';
   card.dataset.id = item.id;
+  card.dataset.wagerId = item.id;
 
   // ── Video box ──
   const videoBox = document.createElement('div');
@@ -144,10 +198,22 @@ function buildCard(item: FeedItem, videoToken: string | null): HTMLElement {
     videoBox.innerHTML = `<div class="wager-thumbnail-placeholder">No preview</div>`;
   }
 
-  // ── Outcomes ──
-  const outcomesHtml = item.outcomes
-    .map(o => `<button class="outcome-chip">${escHtml(o.description)}</button>`)
-    .join('');
+  // ── Outcomes with live stats ──
+  const outcomesEl = document.createElement('div');
+  outcomesEl.className = 'wager-outcomes';
+  item.outcomes.forEach(o => {
+    const chip = document.createElement('div');
+    chip.className = 'outcome-chip';
+    chip.dataset.outcomeId = o.id;
+    chip.innerHTML = `
+      <div class="outcome-chip-row">
+        <span class="outcome-description">${escHtml(o.description)}</span>
+        <span class="outcome-coefficient">—</span>
+      </div>
+      <div class="outcome-pool-bar"><div class="outcome-pool-fill" style="width:0%"></div></div>
+    `;
+    outcomesEl.appendChild(chip);
+  });
 
   const date = new Date(item.createdAt).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
@@ -159,7 +225,6 @@ function buildCard(item: FeedItem, videoToken: string | null): HTMLElement {
   body.innerHTML = `
     <div class="wager-name">${escHtml(item.name)}</div>
     <div class="wager-text">${escHtml(item.text)}</div>
-    <div class="wager-outcomes">${outcomesHtml}</div>
     <div class="wager-meta">
       <span>${date}</span>
       <span class="wager-meta-dot">·</span>
@@ -168,9 +233,11 @@ function buildCard(item: FeedItem, videoToken: string | null): HTMLElement {
       <span>${formatDuration(item.media.durationSeconds)}</span>
     </div>
   `;
+  body.insertAdjacentElement('afterbegin', outcomesEl);
 
   card.appendChild(videoBox);
   card.appendChild(body);
+  statsObserver.observe(card);
   return card;
 }
 

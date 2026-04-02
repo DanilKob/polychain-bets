@@ -31,3 +31,17 @@ video:
   token:
     secret: ${VIDEO_TOKEN_SECRET:dGhpcy1pcy1hLXN1cGVyLXNlY3JldC1rZXktZm9yLXZpZGVvLXRva2Vucy0xMjM=}
     expiry-seconds: 3600
+
+platform:
+  margin: ${PLATFORM_MARGIN:0.05}
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5413/polychain-finance
+    username: polychain-finance-user
+    password: polychain-finance-password
+  flyway:
+    url: jdbc:postgresql://localhost:5413/polychain-finance
+    user: polychain-finance-user
+    password: polychain-finance-password
+    locations: classpath:db/migration

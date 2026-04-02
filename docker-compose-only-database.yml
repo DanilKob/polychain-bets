@@ -21,7 +21,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: adminpassword
     volumes:
-      - mongodb_data:/data/db
+      - ./mongodb_data:/data/db
       - ./mongo-keyfile:/data/mongo-keyfile
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/admin -u admin -p adminpassword --quiet
@@ -84,6 +84,24 @@ services:
             print('Databases created');
           "
     restart: "no"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: polychain-postgres
+    environment:
+      POSTGRES_USER: polychain-finance-user
+      POSTGRES_PASSWORD: polychain-finance-password
+      POSTGRES_DB: polychain-finance
+    ports:
+      - "5413:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polychain-finance-user -d polychain-finance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   # Zookeeper is a distributed coordination service that Kafka depends on to function.
   # It handles broker registration (tracks which Kafka brokers are alive), leader election

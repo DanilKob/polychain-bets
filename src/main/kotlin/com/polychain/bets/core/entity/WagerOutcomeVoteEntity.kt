@@ -3,12 +3,14 @@ package com.polychain.bets.core.entity
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.Id
 import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.mongodb.core.index.CompoundIndex
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.mapping.Field
 import java.time.Instant
 import java.util.*
 
 @Document(collection = "wager_outcome_vote")
+@CompoundIndex(def = "{'wager_id': 1, 'user_id': 1}", unique = true)
 data class WagerOutcomeVoteEntity(
     @Id
     val id: String = UUID.randomUUID().toString(),
@@ -19,10 +21,10 @@ data class WagerOutcomeVoteEntity(
     @Field("wager_outcome_id")
     var wagerOutcomeId: String,
 
-    @Field("trx_sun_amount")
-    var trxSunAmount: Long,
-    @Field("win_trx_sun_amount")
-    var winTrxSunAmount: Long? = null,
+    @Field("coins_amount")
+    val coinCentsAmount: Long,
+    @Field("win_coins_amount")
+    var winCoinCentsAmount: Long? = null,
 
 
     @Field("win_coefficient")

@@ -9,10 +9,15 @@ import com.polychain.bets.core.entity.VideoData
 import com.polychain.bets.core.entity.WagerEntity
 import com.polychain.bets.core.entity.WagerMediaEntity
 import com.polychain.bets.core.entity.WagerOutcomeEntity
+import com.polychain.bets.core.entity.WagerOutcomeStats
+import com.polychain.bets.core.entity.WagerOutcomeVoteEntity
+import com.polychain.bets.core.entity.WagerStatsEntity
 import com.polychain.bets.core.entity.WagerStatus
 import com.polychain.bets.core.repository.WagerMediaMongoRepository
 import com.polychain.bets.core.repository.WagerMongoRepository
 import com.polychain.bets.core.repository.WagerOutcomeMongoRepository
+import com.polychain.bets.core.repository.WagerOutcomeVoteMongoRepository
+import com.polychain.bets.core.repository.WagerStatsMongoRepository
 import com.polychain.bets.media.repository.VideoRepository
 import com.polychain.bets.media.service.MediaServiceInterface
 import kotlinx.coroutines.async
@@ -20,6 +25,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.reactive.asFlow
 import kotlinx.coroutines.reactive.awaitFirstOrNull
 import kotlinx.coroutines.reactive.awaitSingle
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -31,9 +37,13 @@ class WagerService(
     private val wagerRepository: WagerMongoRepository,
     private val reactiveMongoTemplate: ReactiveMongoTemplate,
     private val wagerOutcomeMongoRepository: WagerOutcomeMongoRepository,
+    private val wagerOutcomeVoteMongoRepository: WagerOutcomeVoteMongoRepository,
     private val wagerMediaMongoRepository: WagerMediaMongoRepository,
+    private val wagerStatsMongoRepository: WagerStatsMongoRepository,
+    private val coefficientService: CoefficientServiceInterface,
     private val mediaService: MediaServiceInterface,
     private val videoRepository: VideoRepository,
+    @Value("\${platform.margin}") private val platformMargin: java.math.BigDecimal,
 ) : WagerServiceInterface {
 
     companion object {
@@ -45,6 +55,11 @@ class WagerService(
             WagerStatus.FINISH_REWARD_DISTRIBUTION_STARTED,
             WagerStatus.FINISHED,
         )
+        private val random = java.util.Random()
+        private const val DEBUG_MIN_VOTERS = 10
+        private const val DEBUG_MAX_VOTERS = 200
+        private const val DEBUG_MIN_COIN_CENTS = 100L
+        private const val DEBUG_MAX_COIN_CENTS = 10_000L
     }
 
     override suspend fun searchForFeed(
@@ -154,7 +169,8 @@ class WagerService(
                 description = outcome.description,
             )
         }
-        wagerOutcomeMongoRepository.saveAll(wagerOutcomeEntities).collectList().awaitSingle()
+        val savedOutcomes = wagerOutcomeMongoRepository.saveAll(wagerOutcomeEntities).collectList().awaitSingle()
+        saveRandomDebugStats(wager.id, savedOutcomes)
         wager.status = WagerStatus.ACTIVE
         wagerRepository.save(wager).awaitSingle()
     }
@@ -199,10 +215,66 @@ class WagerService(
                     description = outcome,
                 )
             }
-            wagerOutcomeMongoRepository.saveAll(wagerOutcomeEntities).collectList().awaitSingle()
+            val savedOutcomes = wagerOutcomeMongoRepository.saveAll(wagerOutcomeEntities).collectList().awaitSingle()
+            saveRandomDebugStats(wager.id, savedOutcomes)
             wager.status = WagerStatus.ACTIVE
             wagerRepository.save(wager).awaitSingle()
         }
+    }
+
+    private suspend fun saveRandomDebugStats(
+        wagerId: String,
+        outcomes: List<WagerOutcomeEntity>,
+    ) {
+        val voterCount = DEBUG_MIN_VOTERS + random.nextInt(DEBUG_MAX_VOTERS - DEBUG_MIN_VOTERS + 1)
+
+        // Generate one vote per fake user, each picks a random outcome
+        val votes = (1..voterCount).map { i ->
+            val outcome = outcomes[random.nextInt(outcomes.size)]
+            val coins = DEBUG_MIN_COIN_CENTS +
+                (random.nextLong() % (DEBUG_MAX_COIN_CENTS - DEBUG_MIN_COIN_CENTS + 1)).let {
+                    if (it < 0) -it else it
+                }
+            WagerOutcomeVoteEntity(
+                userId = "debug-user-$wagerId-$i",
+                wagerId = wagerId,
+                wagerOutcomeId = outcome.id,
+                coinCentsAmount = coins,
+            )
+        }
+        wagerOutcomeVoteMongoRepository.saveAll(votes).collectList().awaitSingle()
+
+        // Aggregate pools per outcome
+        val poolByOutcome = votes.groupBy { it.wagerOutcomeId }
+            .mapValues { (_, v) -> v.sumOf { it.coinCentsAmount } }
+        val totalPool = votes.sumOf { it.coinCentsAmount }
+
+        // Compute coefficients
+        val coefficients = coefficientService.calculateAllCoefficients(
+            totalPool = totalPool,
+            outcomePools = poolByOutcome,
+            margin = platformMargin,
+        )
+
+        val statsEntity = WagerStatsEntity(
+            wagerId = wagerId,
+            totalPool = totalPool,
+            voterCount = voterCount,
+            outcomes = outcomes.map { outcome ->
+                val pool = poolByOutcome[outcome.id] ?: 0L
+                val coefficientBp = coefficients[outcome.id]
+                    ?.multiply(java.math.BigDecimal.valueOf(100))
+                    ?.toLong()
+                    ?: 0L
+                WagerOutcomeStats(
+                    outcomeId = outcome.id,
+                    pool = pool,
+                    voterCount = votes.count { it.wagerOutcomeId == outcome.id },
+                    coefficientBp = coefficientBp,
+                )
+            },
+        )
+        wagerStatsMongoRepository.save(statsEntity).awaitSingle()
     }
 
     private suspend fun queryWagers(

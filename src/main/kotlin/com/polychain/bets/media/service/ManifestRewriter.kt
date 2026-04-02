@@ -16,7 +16,7 @@ class ManifestRewriter(
      *   720p/playlist.m3u8
      *
      * After:
-     *   https://api.example.com/api/videos/abc123/manifest/720p/playlist.m3u8
+     *   https://api.example.com/api/v1/video/abc123/hls/720p/playlist.m3u8
      */
     override fun rewriteMasterPlaylist(raw: String, videoId: String): String {
         return raw.lines().joinToString("\n") { line ->
@@ -24,7 +24,7 @@ class ManifestRewriter(
                 line.startsWith("#") -> line
                 line.endsWith(".m3u8") -> {
                     val quality = line.removeSuffix("/playlist.m3u8")   // "720p"
-                    "$baseUrl/api/videos/$videoId/manifest/$quality/playlist.m3u8"
+                    "$baseUrl/api/v1/video/$videoId/hls/$quality/playlist.m3u8"
                 }
                 else -> line
             }
